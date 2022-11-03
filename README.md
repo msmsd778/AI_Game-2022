@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Installing prerequisites (Python, Pip and Packages) 
 1- Install <a href=https://www.python.org/downloads/>Python</a> version 3.6 or upper 
 
@@ -71,3 +72,6 @@
 - You can change IP and Port of server in `'client_config.json'` 
 
 
+=======
+# AI_Game-2022
+>>>>>>> 1a1be0887eb668bf9eb12d54e34ee96f4f6d3263

@@ -27,26 +27,31 @@ class Agent(BaseAgent):
     openList = []
     closedList = []
     cost_grid = []
-    diamonds = dict()
+    diamonds = []
     walls = []
     moved = False
     path = []
 
     def do_turn(self) -> Action:
+        
         agent = self.get_agent()
+        self.diamonds = []
+        self.get_diamonds()
         if self.moved == False:
             self.path = []
             self.get_diamonds()
             nd = self.get_near_diamonds(self.diamonds, agent[0], agent[1])
+            print(nd)
             if len(nd) == 0:
-                dest = self.get_nearest_diamond()
+                # print('hello')
+                dest = self.get_nearest_diamond(self.diamonds)
             else:
                 dest = nd[0]  # calculate sequence later!           
             found = self.A_star(agent, dest)
             if found:
                 self.moved = True
         if len(self.path) == 0:
-            return Action.NOOP        
+            return Action.NOOP       
         
         x = self.path.pop(0)
         return x
@@ -107,10 +112,10 @@ class Agent(BaseAgent):
         #     #no solution
         #     pass
 
-    def get_nearest_diamond(self, agent, diamonds):
+    def get_nearest_diamond(self, diamonds):
         '''implemented with diagonal distance as the heuristic function'''
-        x = self.get_agent[0]
-        y = self.get_agent[1]
+        x = self.get_agent()[0]
+        y = self.get_agent()[1]
         D = 1
         D2 = 2
         h = 2**32

@@ -39,14 +39,11 @@ class Agent(BaseAgent):
         self.get_diamonds()
         if self.moved == False:
             self.path = []
-            self.get_diamonds()
             nd = self.get_near_diamonds(self.diamonds, agent[0], agent[1])
-            print(nd)
             if len(nd) == 0:
-                # print('hello')
                 dest = self.get_nearest_diamond(self.diamonds)
             else:
-                dest = nd[0]  # calculate sequence later!           
+                dest = list(nd[0].values())[0]  # calculate sequence later!           
             found = self.A_star(agent, dest)
             if found:
                 self.moved = True
@@ -84,33 +81,6 @@ class Agent(BaseAgent):
                 if 'W' in self.grid[i][j]:
                     self.walls.append((i,j))
 
-    # def is_reachable(self, agent, diamond):
-    #     """check turn, score, walls"""
-        
-
-    # def find_route(self, agent, diamond):
-        # """return score"""
-        # start = (0,0)
-        # end = (self.grid_height-1, self.grid_width-1)
-        # self.openSet.append(start)
-        # if len(self.openSet) > 0:
-        #     #keep going
-        #     winner = 0
-        #     for i in range(i, len(self.openSet)):
-        #         if self.openSet[i].f < self.openSet[winner].f:
-        #             winner = i
-                    
-        #     current = self.openSet[winner]
-                    
-        #     if current == end:
-        #         return Action.NOOP
-        #     else:
-        #         closedSet.append(current)
-        #         # Done coding from A* video until Part 1 min 25
-            
-        # else:
-        #     #no solution
-        #     pass
 
     def get_nearest_diamond(self, diamonds):
         '''implemented with diagonal distance as the heuristic function'''
@@ -144,36 +114,37 @@ class Agent(BaseAgent):
                     min_f = node.f
                     min_node = node
 
-            self.path.append(self.get_direction(currentNode, min_node))
+
+            d = self.get_direction(currentNode, min_node)
+            self.path.append(d)
             currentNode = min_node
-            self.openList.remove(min_node)
-            self.closedList.append(min_node)
+            self.openList.remove(currentNode)
+            self.closedList.append(currentNode)
 
             if currentNode.cords == diamond:
                 found = True
                 break
             
             neighbors = []
-            for i in range(currentNode.cords[0] - 1, currentNode.cords[0] +1):
+            for i in range(currentNode.cords[0] - 1, currentNode.cords[0] +2):
                 if i < 0 or i > self.grid_height:
                     continue
-                for j in range(currentNode.cords[1] -1 , currentNode.cords[1] +1):
+                for j in range(currentNode.cords[1] -1 , currentNode.cords[1] +2):
                     if j < 0 or j > self.grid_width:
                         continue
                     if (i,j) == currentNode.cords:
                         continue
-                    
                     if abs(currentNode.cords[0] - i) == 0 and abs(currentNode.cords[1] - j) == 1:
-                        neighbors.append(Node((i,j), currentNode.g + 1, self.heuristic(currentNode, diamond)))
+                        neighbors.append(Node((i,j), currentNode.g + 1, self.heuristic(currentNode.cords, diamond)))
                     elif abs(currentNode.cords[0] - i) == 1 and abs(currentNode.cords[1] - j) == 0:
-                        neighbors.append(Node((i,j), currentNode.g + 1, self.heuristic(currentNode, diamond)))
+                        neighbors.append(Node((i,j), currentNode.g + 1, self.heuristic(currentNode.cords, diamond)))
                     else:
-                        neighbors.append(Node((i,j), currentNode.g + 2, self.heuristic(currentNode, diamond)))
+                        neighbors.append(Node((i,j), currentNode.g + 2, self.heuristic(currentNode.cords, diamond)))
 
-                for n in neighbors:
-                    if n in self.closedList and n in self.openList:
-                        continue
-                    self.openList.append(n)
+            for n in neighbors:
+                if n in self.closedList and n in self.openList:
+                    continue
+                self.openList.append(n)
         return found
 
     
@@ -185,22 +156,25 @@ class Agent(BaseAgent):
         return D * (dx + dy) + (D2 - 2 * D) * min(dx, dy)
             
     def get_direction(self, current, next):
+
         if next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == 0:
             return Action.DOWN
-        if next.cords[0] - current.cords[0] == -1 and next.cords[1] - current.cords[1] == 0:
+        elif next.cords[0] - current.cords[0] == -1 and next.cords[1] - current.cords[1] == 0:
             return Action.UP
-        if next.cords[0] - current.cords[0] == 0 and next.cords[1] - current.cords[1] == 1:
+        elif next.cords[0] - current.cords[0] == 0 and next.cords[1] - current.cords[1] == 1:
             return Action.RIGHT
-        if next.cords[0] - current.cords[0] == 0 and next.cords[1] - current.cords[1] == -1:
+        elif next.cords[0] - current.cords[0] == 0 and next.cords[1] - current.cords[1] == -1:
             return Action.LEFT
-        if next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == 1:
+        elif next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == 1:
             return Action.DOWN_RIGHT
-        if next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == -1:
+        elif next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == -1:
             return Action.DOWN_LEFT
-        if next.cords[0] - current.cords[0] == -1 and next.cords[1] - current.cords[1] == 1:
+        elif next.cords[0] - current.cords[0] == -1 and next.cords[1] - current.cords[1] == 1:
             return Action.UP_RIGHT
-        if next.cords[0] - current.cords[0] == -1 and next.cords[1] - current.cords[1] == -1:
+        elif next.cords[0] - current.cords[0] == -1 and next.cords[1] - current.cords[1] == -1:
             return Action.UP_LEFT
+        else:
+            return Action.NOOP
 
 
 if __name__ == '__main__':

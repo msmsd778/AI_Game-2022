@@ -7,3 +7,5 @@ class Node:
         self.g = g
         self.h = h
         self.f = self.g + self.h
+        self.is_wall = False
+        self.previous = None

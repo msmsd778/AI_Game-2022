@@ -26,40 +26,51 @@ class Agent(BaseAgent):
 
     openList = []
     closedList = []
-    cost_grid = []
     diamonds = []
-    walls = []
-    moved = False
+    # walls = []
+    # moved = False
     path = []
     dest = ()
+    grid_nodes = list()
+    direction = []
+
     def do_turn(self) -> Action:
         
-        agent = self.get_agent()
-        self.diamonds = []
-        self.walls = []
-        self.closedList = []
-        self.get_diamonds()
-        self.get_barriers()
-        if self.moved == False:
+        
+        
+
+
+
+        if len(self.direction) == 0:
             self.path = []
+            self.grid_nodes = []
+            self.diamonds = []
+            self.create_grid_nodes()
+            self.get_barriers()
+            self.get_diamonds()
+            agent = self.get_agent()
+
+            self.closedList = []
+            self.openList = []
+
             nd = self.get_near_diamonds(self.diamonds, agent[0], agent[1])
             if len(nd) == 0:
                 self.dest = self.get_nearest_diamond(self.diamonds)
             else:
-                self.dest = list(nd[0].values())[0]  # calculate sequence later!           
+                self.dest = list(nd[0].values())[0]  # calculate sequence later!
+                           
             found = self.A_star(agent, self.dest)
-            if found:
-                self.moved = True
-                print(self.path)
-                print(self.dest)
+            print(found)
+            # if found:
 
-        if len(self.path) == 0:
-            self.moved = False
-            self.dest = ()
-            return Action.NOOP 
+            #     # self.moved = True
+            # print(self.path)
+            # print(self.dest)
+
+       
         
         
-        x = self.path.pop(0)
+        x = self.direction.pop(0)
         return x
 
 
@@ -83,13 +94,25 @@ class Agent(BaseAgent):
             if list(diamonds[i].values())[0][0] <= x+2 and list(diamonds[i].values())[0][0] >= x-2 and list(diamonds[i].values())[0][1] <= y+2 and list(diamonds[i].values())[0][1] >= y-2:
                 near_diamonds.append(diamonds[i])
         return near_diamonds
+
+    def create_grid_nodes(self):
+
+        self.grid_nodes = [None] * self.grid_height
+        
+        for i in range(self.grid_height):
+            self.grid_nodes[i] = [None] * self.grid_width
+
+        for i in range(self.grid_height):
+            for j in range(self.grid_width):
+                self.grid_nodes[i][j] = Node((i,j), 0, 0)
+                
     
     def get_barriers(self):
         for i in range(self.grid_height):
             for j in range(self.grid_width):
                 if 'W' in self.grid[i][j]:
-                    self.walls.append((i,j))
-                    self.closedList.append(Node((i,j),2,3))
+                    self.grid_nodes[i][j].is_wall = True
+                    # self.closedList.append(Node((i,j),2,3))
 
 
     def get_nearest_diamond(self, diamonds):
@@ -109,69 +132,117 @@ class Agent(BaseAgent):
         return coordinate
 
     def A_star(self, agent, diamond):
-        currentNode = Node(agent, 0, 0)
+
+        currentNode = self.grid_nodes[agent[0]][agent[1]]
         self.openList.append(currentNode)
         found = False
-
-        # print('&&&&&&&&&&&&&&&&&&&&&&&&&&')
-        # print(self.walls)
-        # print('&&&&&&&&&&&&&&&&&&&&&&&&&&')
         
         
 
         while len(self.openList) != 0 and not found:
-            min_f = 1000
-            min_node = None
+            min_node = self.openList[0]
             for node in self.openList:
-                if node.f <= min_f:
-                    min_f = node.f
+                if node.f <= min_node.f:
                     min_node = node
 
 
-            d = self.get_direction(currentNode, min_node)
-            self.path.append(d)
+            # if currentNode.cords != min_node.cords: 
+            #     d = self.get_direction(currentNode, min_node)
+            #     print(d)
+            #     self.path.append(d)
             currentNode = min_node
             self.openList.remove(currentNode)
             self.closedList.append(currentNode)
 
             if currentNode.cords == diamond:
                 found = True
+                # find the path here!
+                self.path = []
+                temp = currentNode
+                self.path.append(temp)
+                while(temp.previous):
+                    self.path.append(temp.previous)
+                    temp = temp.previous
+
+                self.find_direction()
                 break
             
             neighbors = []
             for i in range(currentNode.cords[0] - 1, currentNode.cords[0] +2):
-                if i < 0 or i > self.grid_height:
+                if i < 0 or i > self.grid_height -1:
                     continue
                 for j in range(currentNode.cords[1] -1 , currentNode.cords[1] +2):
-                    if j < 0 or j > self.grid_width:
+                    if j < 0 or j > self.grid_width -1 :
                         continue
                     if (i,j) == currentNode.cords:
                         continue
-                    if abs(currentNode.cords[0] - i) == 0 and abs(currentNode.cords[1] - j) == 1:
-                        # neighbors.append(Node((i,j), currentNode.g + 1, self.heuristic(currentNode.cords, diamond)))
-                        neighbors.append(Node((i,j), currentNode.g + 1, self.heuristic((i,j), diamond)))
-                    elif abs(currentNode.cords[0] - i) == 1 and abs(currentNode.cords[1] - j) == 0:
-                        neighbors.append(Node((i,j), currentNode.g + 1, self.heuristic((i,j), diamond)))
-                    else:
-                        neighbors.append(Node((i,j), currentNode.g + 2, self.heuristic((i,j), diamond)))
+                    
+                    neighbors.append(self.grid_nodes[i][j])
+
+                    # if abs(currentNode.cords[0] - i) == 0 and abs(currentNode.cords[1] - j) == 1:
+                    #     # node = self.grid_nodes[i][j]
+                    #     node.g = currentNode.g + 1
+                    #     # node.h = self.heuristic((i,j), diamond)
+                    #     # node.f = self.g + self.h
+                    # elif abs(currentNode.cords[0] - i) == 1 and abs(currentNode.cords[1] - j) == 0:
+                    #     # neighbors.append(self.grid_nodes[i][j], currentNode.g + 1, self.heuristic((i,j), diamond)))
+                    #     # node = self.grid_nodes[i][j]
+                    #     node.g = currentNode.g + 1
+                    #     # node.h = self.heuristic((i,j), diamond)
+                    #     # node.f = self.g + self.h
+                    # else:
+                    #     # neighbors.append(self.grid_nodes[i][j], currentNode.g + 2, self.heuristic((i,j), diamond)))
+                    #     # node = self.grid_nodes[i][j]
+                    #     node.g = currentNode.g + 2
+                        # node.h = self.heuristic((i,j), diamond)
+                        # node.f = self.g + self.h
 
             for n in neighbors:
-                ok = True
-                # if n in self.closedList or n in self.openList:
-                for c in self.closedList:
-                    if n.cords == c.cords:
-                        ok = False
-                        break
-                for o in self.openList:
-                    if n.cords == o.cords:
-                        ok = False
-                        break
-                if ok:
-                    self.openList.append(n)
+                tempG = 0
+
+                if abs(currentNode.cords[0] - n.cords[0]) == 0 and abs(currentNode.cords[1] - n.cords[1]) == 1:
+                        tempG = currentNode.g + 1                       
+                elif abs(currentNode.cords[0] - n.cords[0]) == 1 and abs(currentNode.cords[1] - n.cords[1]) == 0:
+                        tempG = currentNode.g + 1                       
+                else:
+                        tempG = currentNode.g + 2
+
+
+
+                if n not in self.closedList and not n.is_wall:
+                    if n in self.openList:
+                        if tempG < n.g:
+                            n.g = tempG
+                    else:
+                        n.g = tempG
+                        self.openList.append(n)
+
+                    n.h = self.heuristic(n.cords, diamond)
+                    n.f = n.g + n.h
+                    n.previous = currentNode
+
+                # for c in self.closedList:
+                #     if n.cords == c.cords:
+                #         ok = False
+                #         break
+                # for o in self.openList:
+                #     if n.cords == o.cords:
+                #         if n.g < o.g:
+                #             o.g = n.g
+                #         ok = False
+                #         break
+                # for w in self.walls:
+                #     if n.cords == w:
+                #         ok = False
+                #         break
+                # if ok:
+                
             
-            # for n in self.openList:
-            #     print(n.cords , n.f , n.g, n.h)
-            # print('__________________________')
+            for n in self.openList:
+                print(n.cords , n.f , n.g, n.h)
+            print('dest: ', self.dest)
+            # print('walls', self.walls)
+            print('__________________________')
         return found
 
     
@@ -181,8 +252,12 @@ class Agent(BaseAgent):
         dx = abs(start[0] - goal[0])
         dy = abs(start[1] - goal[1])
         return D * (dx + dy) + (D2 - 2 * D) * min(dx, dy)
+
             
     def get_direction(self, current, next):
+
+        print('current', current.cords)
+        print('next', next.cords)
 
         if next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == 0:
             return Action.DOWN
@@ -203,29 +278,11 @@ class Agent(BaseAgent):
         else:
             return Action.NOOP
 
+    def find_direction(self):
+        for i in range(len(self.path) - 1, 0, -1):
+            self.direction.append(self.get_direction(self.path[i], self.path[i-1]))
+
 
 if __name__ == '__main__':
     data = Agent().play()
     print("FINISH : ", data)
-
-
-# These are bullshit. I was trying to implement the a* in a seprate part but I regretted
-# Real shit is in "find route" function. Focus on that!
-
-# class AStarGraph(object):
-#     def __init__(self):
-#         self.barriers = Agent.get_barriers
-    
-#     def heuristic(self, start, goal):
-#         D = 1
-#         D2 = 2
-#         dx = abs(start[0] - goal[0])
-#         dy = abs(start[1] - goal[1])
-#         return D * (dx + dy) + (D2 - 2 * D) * min(dx, dy)
-    
-#     def get_vertex_neighbors(self, pos):
-#         n = []
-#         for dx, dy, in [(1, 0), (-1, 0), (0, -1), (1, 1)]:
-#             x2 = pos[0] + dx
-#             y2 = pos[1]+ dy
-#             if x2 < 0 or x2 > 5 or y2 > 5

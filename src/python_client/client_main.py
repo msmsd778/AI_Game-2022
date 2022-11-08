@@ -5,33 +5,41 @@ from MainClass import Node
 
 class Agent(BaseAgent):
 
-    SCORE_DIAMOND = [
-        ('01', 50),
-        ('02', 0),
-        ('03', 0),
-        ('04', 0),
-        ('11', 50),
-        ('12', 200),
-        ('13', 100),
-        ('14', 0),
-        ('21', 100),
-        ('22', 50),
-        ('23', 200),
-        ('24', 100),
-        ('31', 50),
-        ('32', 100),
-        ('33', 50),
-        ('34', 200),
-        ('41', 250),
-        ('42', 50),
-        ('43', 100),
-        ('44', 50),
-    ]
-
+    DIAMOND_SCORES = {
+        '01': 50,
+        '02': 0,
+        '03': 0,
+        '04': 0,
+        '11': 50,
+        '12': 200,
+        '13': 100,
+        '14': 0,
+        '21': 100,
+        '22': 50,
+        '23': 200,
+        '24': 100,
+        '31': 50,
+        '32': 100,
+        '33': 50,
+        '34': 200,
+        '41': 250,
+        '42': 50,
+        '43': 100,
+        '44': 50,
+    }
+    
+    COLLECTABLES_SCORE = {
+        '*': -20,
+        'g': 10,
+        'r': 10,
+        'y': 10
+    }
+    
     openList = []
     closedList = []
     diamonds = []
     collected_diamonds = '0'
+    collected_items = ''
     ignored = []
     # walls = []
     # moved = False
@@ -41,19 +49,20 @@ class Agent(BaseAgent):
     direction = []
 
     def do_turn(self) -> Action:
+        
         if len(self.direction) == 0:
             self.path = []
             self.grid_nodes = []
             self.diamonds = []
             self.create_grid_nodes()
             self.get_barriers()
+            self.get_keys()
             self.get_diamonds()
             agent = self.get_agent()
-
             self.closedList = []
             self.openList = []
             diamond_type = ''
-
+            
             nd = self.get_near_diamonds(self.diamonds, agent[0], agent[1])
             if len(nd) == 0:
                 self.dest = self.get_nearest_diamond(self.diamonds)
@@ -74,9 +83,9 @@ class Agent(BaseAgent):
                 else:
                     self.dest = list(nd[0].values())[0] # calculate sequence later!
                     diamond_type = list(nd[0].keys())[0]
-                self.collected_diamonds = self.collected_diamonds + diamond_type
+                self.collected_items = self.collected_items + diamond_type
             # print(nd)    
-            # print(self.collected_diamonds)
+            # print(self.collected_items)
             found = self.A_star(agent, self.dest)
             # print(found)
             # if found:
@@ -91,9 +100,6 @@ class Agent(BaseAgent):
         except:
             return Action.NOOP
         
-
-
-        # return Action.DOWN
 
     def get_agent(self):
         for i in range(self.grid_height):
@@ -132,7 +138,7 @@ class Agent(BaseAgent):
                 coordinate = (list(diamonds[i].values())[0][0],list(diamonds[i].values())[0][1])
                 diamond_type = list(diamonds[i].keys())[0]
                 
-        self.collected_diamonds = self.collected_diamonds + diamond_type
+        self.collected_items = self.collected_items + diamond_type
         return coordinate
     
     
@@ -151,14 +157,37 @@ class Agent(BaseAgent):
             for j in range(self.grid_width):
                 if 'W' in self.grid[i][j]:
                     self.grid_nodes[i][j].is_wall = True
+                elif 'G' in self.grid[i][j]:
+                    self.grid_nodes[i][j].door = 'G'
+                elif 'R' in self.grid[i][j]:
+                    self.grid_nodes[i][j].door = 'R'
+                elif 'Y' in self.grid[i][j]:
+                    self.grid_nodes[i][j].door = 'Y'
+                elif '*' in self.grid[i][j]:
+                    self.grid_nodes[i][j].wired = True
                     # self.closedList.append(Node((i,j),2,3))
 
-
+    def get_keys(self):
+        for i in range(self.grid_height):
+            for j in range(self.grid_width):
+                if 'g' in self.grid[i][j]:
+                    self.grid_nodes[i][j].key = 'g'
+                elif 'r' in self.grid[i][j]:
+                    self.grid_nodes[i][j].key = 'r'
+                elif 'y' in self.grid[i][j]:
+                    self.grid_nodes[i][j].key = 'y'
+                    
     
-    # def get_max_score(self, )
-
+    def calculate_score(self):
+        for i in range(len(self.collected_diamonds) - 1):
+            if self.collected_diamonds[i] + self.collected_diamonds[i+1] in list(self.DIAMONDS_SCORES.keys()):
+                s = s + self.DIAMONDS_SCORES[self.collected_diamonds[i] + self.collected_diamonds[i+1]]
+        for i in range(len(self.collected_items)):
+            if self.collected_items[i] in list(self.COLLECTABLES_SCORE.keys()):
+                    s = s + self.COLLECTABLES_SCORE[self.collected_items[i]]
+                    
+  
     def A_star(self, agent, diamond):
-
         currentNode = self.grid_nodes[agent[0]][agent[1]]
         self.openList.append(currentNode)
         found = False 

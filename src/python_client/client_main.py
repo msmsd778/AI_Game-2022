@@ -32,6 +32,7 @@ class Agent(BaseAgent):
     closedList = []
     diamonds = []
     collected_diamonds = '0'
+    ignored = []
     # walls = []
     # moved = False
     path = []
@@ -40,7 +41,6 @@ class Agent(BaseAgent):
     direction = []
 
     def do_turn(self) -> Action:
-
         if len(self.direction) == 0:
             self.path = []
             self.grid_nodes = []
@@ -76,8 +76,7 @@ class Agent(BaseAgent):
                     diamond_type = list(nd[0].keys())[0]
                 self.collected_diamonds = self.collected_diamonds + diamond_type
             # print(nd)    
-            print(self.collected_diamonds)
-            
+            # print(self.collected_diamonds)
             found = self.A_star(agent, self.dest)
             # print(found)
             # if found:
@@ -85,6 +84,7 @@ class Agent(BaseAgent):
             #     # self.moved = True
             # print(self.path)
             # print(self.dest)
+        
         try:
             x = self.direction.pop(0)
             return x
@@ -104,7 +104,7 @@ class Agent(BaseAgent):
     def get_diamonds(self):
         for i in range(self.grid_height):
             for j in range(self.grid_width):
-                if ('1' in self.grid[i][j]) or ('2' in self.grid[i][j]) or ('3' in self.grid[i][j]) or ('4' in self.grid[i][j]):
+                if (('1' in self.grid[i][j]) or ('2' in self.grid[i][j]) or ('3' in self.grid[i][j]) or ('4' in self.grid[i][j])) and (i,j) not in self.ignored:
                     self.diamonds.append({self.grid[i][j]: (i,j)})
     
     
@@ -267,6 +267,11 @@ class Agent(BaseAgent):
             # print('dest: ', self.dest)
             # # print('walls', self.walls)
             # print('__________________________')
+        if not found:
+            for i in range(self.grid_height):
+                for j in range(self.grid_width):
+                    if i == diamond[0] and j == diamond[1]:
+                        self.ignored.append(diamond)
         return found
 
     

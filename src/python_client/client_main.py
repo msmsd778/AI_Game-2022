@@ -35,35 +35,44 @@ class Agent(BaseAgent):
         'y': 10
     }
     
+    count = 0
     openList = []
     closedList = []
     diamonds = []
     collected_diamonds = '0'
     collected_items = ''
     ignored = []
-    # walls = []
-    # moved = False
     path = []
     dest = ()
     grid_nodes = list()
     direction = []
+    collected_keys = []
 
     def do_turn(self) -> Action:
+        # self.count += 1
+        # if self.count == 1:
+        #     self.create_grid_nodes()
+        #     self.get_items()
         
         if len(self.direction) == 0:
             self.path = []
             self.grid_nodes = []
             self.diamonds = []
-            self.create_grid_nodes()
-            self.get_barriers()
-            self.get_keys()
-            self.get_diamonds()
-            agent = self.get_agent()
+            # self.ignored = []
             self.closedList = []
             self.openList = []
             diamond_type = ''
-            
+
+            self.create_grid_nodes()
+            agent = self.get_agent()
+            self.get_diamonds()
+            self.get_items()
+
+            if len(self.diamonds) == 0:
+                return Action.NOOP
+
             nd = self.get_near_diamonds(self.diamonds, agent[0], agent[1])
+            print(self.ignored)
             if len(nd) == 0:
                 self.dest = self.get_nearest_diamond(self.diamonds)
                 for i in self.diamonds:
@@ -83,16 +92,13 @@ class Agent(BaseAgent):
                 else:
                     self.dest = list(nd[0].values())[0] # calculate sequence later!
                     diamond_type = list(nd[0].keys())[0]
-                self.collected_items = self.collected_items + diamond_type
-            # print(nd)    
-            # print(self.collected_items)
+                self.collected_items = self.collected_items + diamond_type   #not here: diamond might not be accessible
             found = self.A_star(agent, self.dest)
-            # print(found)
-            # if found:
+            if not found and self.dest not in self.ignored:
+                print(self.dest)
+                self.ignored.append(self.dest)
 
-            #     # self.moved = True
-            # print(self.path)
-            # print(self.dest)
+
         
         try:
             x = self.direction.pop(0)
@@ -110,7 +116,7 @@ class Agent(BaseAgent):
     def get_diamonds(self):
         for i in range(self.grid_height):
             for j in range(self.grid_width):
-                if (('1' in self.grid[i][j]) or ('2' in self.grid[i][j]) or ('3' in self.grid[i][j]) or ('4' in self.grid[i][j])) and (i,j) not in self.ignored:
+                if (('1' in self.grid[i][j]) or ('2' in self.grid[i][j]) or ('3' in self.grid[i][j]) or ('4' in self.grid[i][j])) and ((i,j) not in self.ignored):
                     self.diamonds.append({self.grid[i][j]: (i,j)})
     
     
@@ -129,13 +135,15 @@ class Agent(BaseAgent):
         D = 1
         D2 = 2
         h = 2**32
+        diamond_type = ''
+        coordinate = list(diamonds[0].values())[0]
         for i in range(len(diamonds)):  
             dx = abs(x - list(diamonds[i].values())[0][0])
             dy = abs(y - list(diamonds[i].values())[0][1])
             tmp = D * (dx + dy) + (D2 - 2 * D) * min(dx, dy)
             if tmp < h:
                 h = tmp
-                coordinate = (list(diamonds[i].values())[0][0],list(diamonds[i].values())[0][1])
+                coordinate = list(diamonds[i].values())[0]
                 diamond_type = list(diamonds[i].keys())[0]
                 
         self.collected_items = self.collected_items + diamond_type
@@ -152,31 +160,39 @@ class Agent(BaseAgent):
                 self.grid_nodes[i][j] = Node((i,j), 0, 0)
                 
     
-    def get_barriers(self):
+    # def get_keys(self):
+    #     for i in range(self.grid_height):
+    #         for j in range(self.grid_width):
+    #             if 'g' in self.grid[i][j]:
+    #                 self.grid_nodes[i][j].key = 'g'
+    #             elif 'r' in self.grid[i][j]:
+    #                 self.grid_nodes[i][j].key = 'r'
+    #             elif 'y' in self.grid[i][j]:
+    #                 self.grid_nodes[i][j].key = 'y'
+    
+    def get_items(self):
         for i in range(self.grid_height):
             for j in range(self.grid_width):
                 if 'W' in self.grid[i][j]:
                     self.grid_nodes[i][j].is_wall = True
-                elif 'G' in self.grid[i][j]:
-                    self.grid_nodes[i][j].door = 'G'
-                elif 'R' in self.grid[i][j]:
-                    self.grid_nodes[i][j].door = 'R'
-                elif 'Y' in self.grid[i][j]:
-                    self.grid_nodes[i][j].door = 'Y'
                 elif '*' in self.grid[i][j]:
                     self.grid_nodes[i][j].wired = True
-                    # self.closedList.append(Node((i,j),2,3))
-
-    def get_keys(self):
-        for i in range(self.grid_height):
-            for j in range(self.grid_width):
-                if 'g' in self.grid[i][j]:
+                elif 'G' in self.grid[i][j] and 'G' not in self.collected_keys:
+                    self.grid_nodes[i][j].door = 'G'
+                    self.grid_nodes[i][j].is_door = True
+                elif 'R' in self.grid[i][j] and 'R' not in self.collected_keys:
+                    self.grid_nodes[i][j].door = 'R'
+                    self.grid_nodes[i][j].is_door = True
+                elif 'Y' in self.grid[i][j] and 'Y' not in self.collected_keys:
+                    self.grid_nodes[i][j].door = 'Y'
+                    self.grid_nodes[i][j].is_door = True
+                elif 'g' in self.grid[i][j]:
                     self.grid_nodes[i][j].key = 'g'
                 elif 'r' in self.grid[i][j]:
                     self.grid_nodes[i][j].key = 'r'
                 elif 'y' in self.grid[i][j]:
                     self.grid_nodes[i][j].key = 'y'
-                    
+
     
     def calculate_score(self):
         for i in range(len(self.collected_diamonds) - 1):
@@ -199,21 +215,17 @@ class Agent(BaseAgent):
                     min_node = node
 
 
-            # if currentNode.cords != min_node.cords: 
-            #     d = self.get_direction(currentNode, min_node)
-            #     print(d)
-            #     self.path.append(d)
             currentNode = min_node
             self.openList.remove(currentNode)
             self.closedList.append(currentNode)
 
             if currentNode.cords == diamond:
                 found = True
-                # find the path here!
                 self.path = []
                 temp = currentNode
                 self.path.append(temp)
                 while(temp.previous):
+                    self.check_key(temp.previous)
                     self.path.append(temp.previous)
                     temp = temp.previous
 
@@ -232,28 +244,13 @@ class Agent(BaseAgent):
                     
                     neighbors.append(self.grid_nodes[i][j])
 
-                    # if abs(currentNode.cords[0] - i) == 0 and abs(currentNode.cords[1] - j) == 1:
-                    #     # node = self.grid_nodes[i][j]
-                    #     node.g = currentNode.g + 1
-                    #     # node.h = self.heuristic((i,j), diamond)
-                    #     # node.f = self.g + self.h
-                    # elif abs(currentNode.cords[0] - i) == 1 and abs(currentNode.cords[1] - j) == 0:
-                    #     # neighbors.append(self.grid_nodes[i][j], currentNode.g + 1, self.heuristic((i,j), diamond)))
-                    #     # node = self.grid_nodes[i][j]
-                    #     node.g = currentNode.g + 1
-                    #     # node.h = self.heuristic((i,j), diamond)
-                    #     # node.f = self.g + self.h
-                    # else:
-                    #     # neighbors.append(self.grid_nodes[i][j], currentNode.g + 2, self.heuristic((i,j), diamond)))
-                    #     # node = self.grid_nodes[i][j]
-                    #     node.g = currentNode.g + 2
-                        # node.h = self.heuristic((i,j), diamond)
-                        # node.f = self.g + self.h
 
             for n in neighbors:
                 tempG = 0
 
-                if abs(currentNode.cords[0] - n.cords[0]) == 0 and abs(currentNode.cords[1] - n.cords[1]) == 1:
+                if n.is_wired:
+                    tempG = currentNode.g + 20
+                elif abs(currentNode.cords[0] - n.cords[0]) == 0 and abs(currentNode.cords[1] - n.cords[1]) == 1:
                         tempG = currentNode.g + 1                       
                 elif abs(currentNode.cords[0] - n.cords[0]) == 1 and abs(currentNode.cords[1] - n.cords[1]) == 0:
                         tempG = currentNode.g + 1                       
@@ -262,7 +259,7 @@ class Agent(BaseAgent):
 
 
 
-                if n not in self.closedList and not n.is_wall:
+                if n not in self.closedList and not n.is_wall and not n.is_door:
                     if n in self.openList:
                         if tempG < n.g:
                             n.g = tempG
@@ -274,33 +271,6 @@ class Agent(BaseAgent):
                     n.f = n.g + n.h
                     n.previous = currentNode
 
-                # for c in self.closedList:
-                #     if n.cords == c.cords:
-                #         ok = False
-                #         break
-                # for o in self.openList:
-                #     if n.cords == o.cords:
-                #         if n.g < o.g:
-                #             o.g = n.g
-                #         ok = False
-                #         break
-                # for w in self.walls:
-                #     if n.cords == w:
-                #         ok = False
-                #         break
-                # if ok:
-                
-            
-            # for n in self.openList:
-            #     print(n.cords , n.f , n.g, n.h)
-            # print('dest: ', self.dest)
-            # # print('walls', self.walls)
-            # print('__________________________')
-        if not found:
-            for i in range(self.grid_height):
-                for j in range(self.grid_width):
-                    if i == diamond[0] and j == diamond[1]:
-                        self.ignored.append(diamond)
         return found
 
     
@@ -314,8 +284,6 @@ class Agent(BaseAgent):
             
     def get_direction(self, current, next):
 
-        # print('current', current.cords)
-        # print('next', next.cords)
 
         if next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == 0:
             return Action.DOWN
@@ -339,6 +307,16 @@ class Agent(BaseAgent):
     def find_direction(self):
         for i in range(len(self.path) - 1, 0, -1):
             self.direction.append(self.get_direction(self.path[i], self.path[i-1]))
+
+    def check_key(self, node):
+        if node.key and node.key.upper() not in self.collected_keys:
+            self.collected_keys.append(node.key.upper())
+            self.ignored = []
+            # for i in range(self.grid_height):
+            #     for j in range(self.grid_width):
+            #         if self.grid_nodes[i][j].door == node.key.upper():
+            #             self.grid_nodes[i][j].door = ''
+            #             self.grid_nodes[i][j].is_door = False
 
 
 if __name__ == '__main__':

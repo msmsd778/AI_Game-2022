@@ -8,7 +8,8 @@ class Node:
         self.h = h
         self.f = self.g + self.h
         self.is_wall = False
-        self.door = False
-        self.key = False
-        self.wired = False
+        self.is_door = False
+        self.door = ''
+        self.key = ''
+        self.is_wired = False
         self.previous = None

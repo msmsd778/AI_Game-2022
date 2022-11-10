@@ -47,6 +47,9 @@ class Agent(BaseAgent):
     grid_nodes = list()
     direction = []
     collected_keys = []
+    total_clusters = []
+    clustering_ignored = []
+    clustered = False
 
     def do_turn(self) -> Action:
         # self.count += 1
@@ -66,13 +69,19 @@ class Agent(BaseAgent):
             self.create_grid_nodes()
             agent = self.get_agent()
             self.get_diamonds()
+            # print(self.diamonds)
             self.get_items()
+            if not self.clustered:
+                self.clustering()
+                self.clustered = True
+                print(self.total_clusters)
+
 
             if len(self.diamonds) == 0:
                 return Action.NOOP
 
             nd = self.get_near_diamonds(self.diamonds, agent[0], agent[1])
-            print(self.ignored)
+            # print(self.ignored)
             if len(nd) == 0:
                 self.dest = self.get_nearest_diamond(self.diamonds)
                 for i in self.diamonds:
@@ -95,7 +104,7 @@ class Agent(BaseAgent):
                 self.collected_items = self.collected_items + diamond_type   #not here: diamond might not be accessible
             found = self.A_star(agent, self.dest)
             if not found and self.dest not in self.ignored:
-                print(self.dest)
+                # print(self.dest)
                 self.ignored.append(self.dest)
 
 
@@ -150,6 +159,57 @@ class Agent(BaseAgent):
         return coordinate
     
     
+    def get_nearest_for_cluster(self, diamonds, beginning, initialization):
+        '''implemented with diagonal distance as the heuristic function'''
+        x = beginning[0]
+        y = beginning[1]
+        D = 1
+        D2 = 2
+        h = 2**32
+        coordinate = []
+        for i in range(len(diamonds)):
+            dx = abs(x - diamonds[i][0])
+            dy = abs(y - diamonds[i][1])
+            tmp = D * (dx + dy) + (D2 - 2 * D) * min(dx, dy)
+            if not initialization: 
+                if tmp < h and tmp <= 3:
+                    h = tmp
+                    coordinate = diamonds[i]
+            else:
+                if tmp < h:
+                    h = tmp
+                    coordinate = diamonds[i]
+        return coordinate
+    
+    
+    def clustering(self):
+        cords = None
+        tmp1 = []
+        for i in self.diamonds:
+            tmp1.append(list(i.values())[0])
+            
+        while(len(self.diamonds) != len(self.clustering_ignored)):
+            cluster = []
+            tmp2 = []
+            for element in tmp1:
+                if element not in self.clustering_ignored and element not in self.ignored:
+                    tmp2.append(element)
+            cords = self.get_nearest_for_cluster(tmp2, self.get_agent(), True)
+            cluster.append(cords)
+            self.clustering_ignored.append(cords)
+            tmp2.remove(cords)
+            
+            for i in range(3):
+                cords = self.get_nearest_for_cluster(tmp2, cords, False)
+                if not cords:
+                    break
+                cluster.append(cords)
+                self.clustering_ignored.append(cords)
+                tmp2.remove(cords)
+           
+            self.total_clusters.append(cluster)
+            
+    
     def create_grid_nodes(self):
         self.grid_nodes = [None] * self.grid_height
         for i in range(self.grid_height):
@@ -195,12 +255,14 @@ class Agent(BaseAgent):
 
     
     def calculate_score(self):
+        s = 0
         for i in range(len(self.collected_diamonds) - 1):
-            if self.collected_diamonds[i] + self.collected_diamonds[i+1] in list(self.DIAMONDS_SCORES.keys()):
-                s = s + self.DIAMONDS_SCORES[self.collected_diamonds[i] + self.collected_diamonds[i+1]]
+            if str(self.collected_diamonds[i]) + str(self.collected_diamonds[i+1]) in list(self.DIAMOND_SCORES.keys()):
+                s = s + self.DIAMOND_SCORES[str(self.collected_diamonds[i]) + str(self.collected_diamonds[i+1])]
         for i in range(len(self.collected_items)):
-            if self.collected_items[i] in list(self.COLLECTABLES_SCORE.keys()):
-                    s = s + self.COLLECTABLES_SCORE[self.collected_items[i]]
+            if str(self.collected_items[i]) in list(self.COLLECTABLES_SCORE.keys()):
+                    s = s + self.COLLECTABLES_SCORE[str(self.collected_items[i])]
+        return s
                     
   
     def A_star(self, agent, diamond):
@@ -283,7 +345,6 @@ class Agent(BaseAgent):
 
             
     def get_direction(self, current, next):
-
 
         if next.cords[0] - current.cords[0] == 1 and next.cords[1] - current.cords[1] == 0:
             return Action.DOWN

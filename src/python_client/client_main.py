@@ -1,6 +1,7 @@
 import random
 from base import BaseAgent, Action
 from MainClass import Node
+from itertools import permutations
 
 
 class Agent(BaseAgent):
@@ -69,14 +70,14 @@ class Agent(BaseAgent):
             self.create_grid_nodes()
             agent = self.get_agent()
             self.get_diamonds()
-            # print(self.diamonds)
             self.get_items()
             if not self.clustered:
                 self.clustering()
                 self.clustered = True
-                print(self.total_clusters)
-
-
+                for i in self.total_clusters:
+                    print(self.cluster_max_score(i)) # to be saved somewhere
+            
+            
             if len(self.diamonds) == 0:
                 return Action.NOOP
 
@@ -208,6 +209,32 @@ class Agent(BaseAgent):
                 tmp2.remove(cords)
            
             self.total_clusters.append(cluster)
+    
+    
+    
+    def cluster_max_score(self, cords_list):
+        sequence = []
+        for i in cords_list:
+            for j in range(len(self.diamonds)):
+                if list(self.diamonds[j].values())[0] == i:
+                        sequence.append(list(self.diamonds[j].keys())[0])
+                
+        perm = list(permutations(sequence))
+        my_max = 0
+        selected_perm = []
+        for j in perm:
+            s = 0
+            for i in range(len(j) - 1):
+                if str(j[i]) + str(j[i+1]) in list(self.DIAMOND_SCORES.keys()):
+                    s = s + self.DIAMOND_SCORES[str(j[i]) + str(j[i+1])]
+            if s >= my_max:
+                my_max = s
+                selected_perm = j
+                
+        return selected_perm, my_max
+
+    
+    
             
     
     def create_grid_nodes(self):
